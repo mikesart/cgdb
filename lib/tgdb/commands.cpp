@@ -53,6 +53,16 @@ struct commands {
     uint64_t address_start, address_end;
 
     /**
+     * The info line command output.
+     */
+    struct
+    {
+        char *file;
+        uint64_t addr_start;
+        uint64_t line;
+    } info_line;
+
+    /**
      * The gdbwire context to talk to GDB with.
      */
     struct gdbwire *wire;
@@ -241,6 +251,26 @@ static void send_disassemble_func_complete_response(struct commands *c,
     commands_add_response(c, response);
 }
 
+static void send_info_line_complete_response(struct commands *c,
+        struct gdbwire_mi_result_record *result_record)
+{
+    struct tgdb_response *response = tgdb_create_response(TGDB_INFO_LINE);
+
+    response->choice.info_line.error =
+        (result_record->result_class == GDBWIRE_MI_ERROR);
+
+    if (!response->choice.info_line.error) {
+        response->choice.info_line.file = c->info_line.file;
+        response->choice.info_line.line = c->info_line.line;
+        response->choice.info_line.addr_start = c->info_line.addr_start;
+
+        /* Clear file since we've just stolen that pointer. */
+        c->info_line.file = NULL;
+    }
+
+    commands_add_response(c, response);
+}
+
 static void send_command_complete_response(struct commands *c)
 {
     struct tgdb_response *response =
@@ -383,6 +413,32 @@ static void gdbwire_stream_record_callback(void *context,
                 }
             }
             break;
+        case COMMAND_INFO_LINE:
+            if ((stream_record->kind == GDBWIRE_MI_CONSOLE) && !c->info_line.file) {
+                char *tok;
+                char *fields[10];
+                int numfields = 0;
+                char *str = stream_record->cstring;
+
+                tok = strtok(str, ":");
+                while (tok) {
+                    fields[numfields++] = tok;
+                    if (numfields >= sizeof(fields) / sizeof(fields[0]))
+                        break;
+
+                    tok = strtok(NULL, ":");
+                }
+
+                /* /home/mikesart/src/gitwin.cpp:4032:141744:beg:0x9276ba\n */
+                if ((numfields == 5) && fs_verify_file_exists(fields[0])) {
+                    char *endptr;
+
+                    c->info_line.file = cgdb_strdup(fields[0]);
+                    c->info_line.line = strtoull(fields[1], &endptr, 10);
+                    c->info_line.addr_start = strtoull(fields[4], &endptr, 16);
+                }
+            }
+            break;
         case COMMAND_COMPLETE:
             if (stream_record->kind == GDBWIRE_MI_CONSOLE) {
                 char *str = stream_record->cstring;
@@ -422,6 +478,9 @@ static void gdbwire_result_record_callback(void *context,
         case COMMAND_DISASSEMBLE_PC:
         case COMMAND_DISASSEMBLE_FUNC:
             send_disassemble_func_complete_response(c, result_record);
+            break;
+        case COMMAND_INFO_LINE:
+            send_info_line_complete_response(c, result_record);
             break;
         case COMMAND_COMPLETE:
             send_command_complete_response(c);
@@ -478,6 +537,10 @@ struct commands *commands_initialize(struct tgdb *tgdb)
     c->disasm = NULL;
     c->address_start = 0;
     c->address_end = 0;
+
+    c->info_line.file = NULL;
+    c->info_line.addr_start = 0;
+    c->info_line.line = 0;
 
     struct gdbwire_callbacks callbacks = wire_callbacks;
     callbacks.context = (void*)c;
@@ -575,6 +638,8 @@ static char *create_gdb_command(struct commands *c,
              */
             return sys_aprintf("server interp mi \"disassemble%s%s\"\n",
                                data ? " " : "", data ? data : "");
+        case COMMAND_INFO_LINE:
+            return sys_aprintf("info line %s\nserver interpreter-exec mi \"info line %s\"\n", data, data);
         case COMMAND_BREAKPOINTS:
             return strdup("server interpreter-exec mi \"-break-info\"\n");
         case COMMAND_TTY:

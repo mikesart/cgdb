@@ -1671,7 +1671,7 @@ void if_print_message(const char *fmt, ...)
     if_print(va_buf);
 }
 
-void if_show_file(char *path, int sel_line, int exe_line)
+void if_show_file(const char *path, int sel_line, int exe_line)
 {
     if (source_set_exec_line(src_viewer, path, sel_line, exe_line) == 0)
         if_draw();

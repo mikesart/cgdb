@@ -394,6 +394,17 @@
     void tgdb_request_disassemble_func(struct tgdb *tgdb,
             enum disassemble_func_type type);
 
+   /**
+    * Get information on a location
+    *
+    * \param tgdb
+    * An instance of the tgdb library to operate on.
+    *
+    * \param location
+    * string to pass to gdb "info line" command.
+    */
+    void tgdb_request_info_line(struct tgdb *tgdb, const char *location);
+
   /**
    * Free the tgdb request pointer data.
    *

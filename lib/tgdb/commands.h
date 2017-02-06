@@ -56,6 +56,11 @@ enum command_kind {
     COMMAND_DISASSEMBLE_FUNC,
 
     /**
+     * Get starting and ending addresses of the compiled code for source line location.
+     */
+    COMMAND_INFO_LINE,
+
+    /**
      * Query if the CLI disassemble command supports mixed source+assembly.
      *
      * Mixed source+assembly mode was added as the /s flag to the CLI

@@ -201,6 +201,7 @@ static int command_focus_gdb(int param);
 static int command_do_bang(int param);
 static int command_do_focus(int param);
 static int command_do_help(int param);
+static int command_do_info(int param);
 static int command_do_logo(int param);
 static int command_do_quit(int param);
 static int command_do_shell(int param);
@@ -229,6 +230,7 @@ COMMANDS commands[] = {
     /* logo         */ {"logo", (action_t)command_do_logo, 0},
     /* highlight    */ {"highlight", (action_t)command_parse_highlight, 0},
     /* highlight    */ {"hi", (action_t)command_parse_highlight, 0},
+    /* info         */ {"info", (action_t)command_do_info, 0},
     /* imap         */ {"imap", (action_t)command_parse_map, 0},
     /* imap         */ {"im", (action_t)command_parse_map, 0},
     /* iunmap       */ {"iunmap", (action_t)command_parse_unmap, 0},
@@ -641,6 +643,31 @@ int command_do_quit(int param)
 int command_do_shell(int param)
 {
     return run_shell_command(NULL);
+}
+
+int command_do_info(int param)
+{
+    int token1 = yylex();
+    const char *value1 = get_token();
+
+    if ((token1 != EOL) && !strcasecmp(value1, "line")) {
+        int token2 = yylex();
+        const char *location = get_token();
+
+        if (token2 != EOL) {
+            char *cmd = sys_aprintf("info line %s\n", location);
+
+            if_print(cmd);
+            tgdb_request_run_console_command(tgdb, cmd);
+
+            tgdb_request_info_line(tgdb, location);
+
+            free(cmd);
+            return 1;
+        }
+    }
+
+    return -1;
 }
 
 int command_source_reload(int param)

@@ -254,6 +254,7 @@ tgdb_does_request_require_console_update(struct tgdb_request *request)
         case TGDB_REQUEST_INFO_SOURCES:
         case TGDB_REQUEST_CURRENT_LOCATION:
         case TGDB_REQUEST_DISASSEMBLE_FUNC:
+        case TGDB_REQUEST_INFO_LINE:
         default:
             return 0;
     }
@@ -686,6 +687,10 @@ void tgdb_request_destroy(tgdb_request_ptr request_ptr)
             break;
         case TGDB_REQUEST_DISASSEMBLE_PC:
         case TGDB_REQUEST_DISASSEMBLE_FUNC:
+            break;
+        case TGDB_REQUEST_INFO_LINE:
+            free((char *) request_ptr->choice.info_line.location);
+            request_ptr->choice.info_line.location = NULL;
             break;
         default:
             break;
@@ -1160,6 +1165,14 @@ int tgdb_delete_response(struct tgdb_response *com)
             sbfree(disasm);
             break;
         }
+        case TGDB_INFO_LINE:
+        {
+            const char *value = com->choice.info_line.file;
+
+            free((char *) value);
+            com->choice.info_line.file = NULL;
+            break;
+        }
         case TGDB_UPDATE_CONSOLE_PROMPT_VALUE:
         {
             const char *value =
@@ -1321,6 +1334,17 @@ void tgdb_request_disassemble_func(struct tgdb *tgdb,
     handle_request(tgdb, request_ptr);
 }
 
+void tgdb_request_info_line(struct tgdb *tgdb, const char *location)
+{
+    tgdb_request_ptr request_ptr;
+
+    request_ptr = (tgdb_request_ptr)cgdb_malloc(sizeof (struct tgdb_request));
+    request_ptr->header = TGDB_REQUEST_INFO_LINE;
+    request_ptr->choice.info_line.location = cgdb_strdup(location);
+
+    handle_request(tgdb, request_ptr);
+}
+
 /* }}}*/
 
 /* Process {{{*/
@@ -1370,6 +1394,10 @@ int tgdb_process_command(struct tgdb *tgdb, tgdb_request_ptr request)
             tgdb_disassemble_func(tgdb->c,
                   request->choice.disassemble_func.raw,
                   request->choice.disassemble_func.source);
+        }
+        else if (request->header == TGDB_REQUEST_INFO_LINE) {
+            commands_issue_command(tgdb->c, COMMAND_INFO_LINE,
+                request->choice.info_line.location, 0);
         }
     }
 

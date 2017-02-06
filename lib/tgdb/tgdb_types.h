@@ -40,7 +40,7 @@
         TGDB_KILL,
     /** This will instruct TGDB to tell the debugger to step. */
         TGDB_STEP,
-    /** 
+    /**
      * This will instruct TGDB to tell the debugger to continue running
      * until a source line past the current line.  This is used to avoid
      * single stepping through loops.
@@ -134,7 +134,9 @@
     /** Ask GDB to disassemble a $pc */
         TGDB_REQUEST_DISASSEMBLE_PC,
     /** Ask GDB to disassemble a function */
-        TGDB_REQUEST_DISASSEMBLE_FUNC
+        TGDB_REQUEST_DISASSEMBLE_FUNC,
+    /** Ask GDB for info on a location */
+        TGDB_REQUEST_INFO_LINE,
     };
 
     struct tgdb_request {
@@ -176,6 +178,10 @@
                 int source;
                 int raw;
             } disassemble_func;
+
+            struct {
+                const char *location;
+            } info_line;
         } choice;
     };
 
@@ -222,11 +228,17 @@
      */
         TGDB_DISASSEMBLE_FUNC,
 
+    /**
+     * info line output
+     *
+     */
+        TGDB_INFO_LINE,
+
     /** The prompt has changed, here is the new value.  */
         TGDB_UPDATE_CONSOLE_PROMPT_VALUE,
 
     /** A debugger command was run */
-    TGDB_DEBUGGER_COMMAND_DELIVERED,
+        TGDB_DEBUGGER_COMMAND_DELIVERED,
 
     /**
      * This happens when gdb quits.
@@ -285,6 +297,14 @@
                 int error;
                 char **disasm;
             } disassemble_function;
+
+            /* header == TGDB_INFO_LINE */
+            struct {
+                int error;
+                const char *file;
+                uint64_t line;
+                uint64_t addr_start;
+            } info_line;
 
             /* header == TGDB_UPDATE_CONSOLE_PROMPT_VALUE */
             struct {

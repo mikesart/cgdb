@@ -1145,6 +1145,12 @@ static void update_disassemble(struct tgdb_response *response)
     }
 }
 
+static void update_info_line(struct tgdb_response *response)
+{
+    if (!response->choice.info_line.error)
+        if_show_file(response->choice.info_line.file, response->choice.info_line.line, 0);
+}
+
 static void update_prompt(struct tgdb_response *response)
 {
     change_prompt(response->choice.update_console_prompt_value.prompt_value);
@@ -1177,6 +1183,9 @@ static void process_commands(struct tgdb *tgdb_in)
         case TGDB_DISASSEMBLE_PC:
         case TGDB_DISASSEMBLE_FUNC:
             update_disassemble(item);
+            break;
+        case TGDB_INFO_LINE:
+            update_info_line(item);
             break;
         case TGDB_UPDATE_CONSOLE_PROMPT_VALUE:
             update_prompt(item);
