@@ -1148,7 +1148,19 @@ static void update_disassemble(struct tgdb_response *response)
 static void update_info_line(struct tgdb_response *response)
 {
     if (!response->choice.info_line.error)
-        if_show_file(response->choice.info_line.file, response->choice.info_line.line, 0);
+    {
+        if (response->choice.info_line.file && !cgdbrc_get_int(CGDBRC_DISASM)) {
+            if_show_file(response->choice.info_line.file, response->choice.info_line.line, 0);
+        } else if (response->choice.info_line.addr_start) {
+            int ret;
+            struct sviewer *sview = if_get_sview();
+
+            /* TODO mikesart: try to load asm file */
+            ret = source_set_exec_addr(sview, response->choice.info_line.addr_start);
+            if (!ret)
+                if_draw();
+        }
+    }
 }
 
 static void update_prompt(struct tgdb_response *response)

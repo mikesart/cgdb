@@ -430,7 +430,7 @@ static void gdbwire_stream_record_callback(void *context,
                 }
 
                 /* /home/mikesart/src/gitwin.cpp:4032:141744:beg:0x9276ba\n */
-                if ((numfields == 5) && fs_verify_file_exists(fields[0])) {
+                if (numfields == 5) {
                     char *endptr;
 
                     c->info_line.file = cgdb_strdup(fields[0]);
